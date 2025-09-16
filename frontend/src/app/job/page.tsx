@@ -35,7 +35,7 @@ export default function JobMonitor() {
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
 
   useEffect(() => {
-    const userId = "3ea1fa7d-f6dc-4b2d-87c1-d6ac2dba5856";
+    const userId = localStorage.getItem("user_id");
     if (!userId) return;
 
     const socket = io("http://localhost:5000", {

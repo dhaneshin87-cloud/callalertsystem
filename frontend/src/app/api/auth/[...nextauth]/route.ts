@@ -64,7 +64,14 @@ export const authOptions = {
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
           accessTokenExpires: Date.now() + (account.expires_in ?? 3600) * 1000,
+          // Capture a stable user identifier
+          userId: account.providerAccountId ?? token.sub ?? token.userId,
         };
+      }
+
+      // Ensure userId persists on subsequent calls
+      if (!token.userId && token.sub) {
+        token.userId = token.sub;
       }
 
       // Return previous token if the access token has not expired yet
@@ -83,6 +90,13 @@ export const authOptions = {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       session.error = token.error;
+
+      // Put userId on the session user
+      session.user = {
+        ...session.user,
+        id: token.userId ?? token.sub ?? null,
+      };
+
       return session;
     },
     async redirect({ url, baseUrl }: { url: string, baseUrl: string }) {

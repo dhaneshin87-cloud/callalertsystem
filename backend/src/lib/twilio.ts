@@ -14,6 +14,9 @@ export async function makeCall(to: string, message: string) {
       to,
       from: process.env.TWILIO_PHONE_NUMBER!,
       twiml: `<Response><Say>${message}</Say></Response>`,
+      statusCallback: 'https://localhost:5000/twilio/status-callback',
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST'
     });
   } catch (error) {
     console.error("Twilio call error:", error);

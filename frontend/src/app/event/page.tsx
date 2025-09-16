@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "../../lib/api"; // Import the configured API client
 import styles from "./event.module.css";
-import { access } from "fs";
-import { headers } from "next/headers";
 
 export default function EventPage() {
-  const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -19,24 +16,44 @@ export default function EventPage() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const[userId,setUserId]=useState<string|null>(null);
 
   useEffect(() => {
-    if (!session) {
+    const access = localStorage.getItem("google_access_token");
+    const refresh = localStorage.getItem("google_refresh_token");
+    const phone = localStorage.getItem("phoneNumber");
+    const storedEmail = localStorage.getItem("user_email");
+    const userID=localStorage.getItem('user_id');
+
+    if (!access || !refresh) {
       router.push("/");
       return;
     }
-    const phone = localStorage.getItem("phoneNumber");
+
     if (!phone) {
       router.push("/phone");
       return;
     }
+
+    setAccessToken(access);
+    setRefreshToken(refresh);
     setPhoneNumber(phone);
-  }, [session, router]);
+    setEmail(storedEmail);
+    setUserId(userID)
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !date || !time) {
       setMessage("Please fill in all required fields.");
+      return;
+    }
+
+    if (!accessToken || !refreshToken) {
+      setMessage("Authentication required.");
       return;
     }
 
@@ -53,7 +70,7 @@ export default function EventPage() {
         {
           method: "POST",
           headers: {
-           "Authorization": `Bearer ${session?.accessToken}`,
+            "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -82,41 +99,35 @@ export default function EventPage() {
         throw new Error("Failed to create calendar event");
       }
 
-      // const eventData = await calendarResponse.json();
-console.log("saving data",session?.user)
-      // Save event to backend with phone number using configured API client
+      // Save event to backend with phone number using API client
       await apiClient.post(
-        '/events/eventcreate',
+        "/events/eventcreate",
         {
           name,
           description,
           date: dateTimeStart,
           endDate: dateTimeEnd,
           phoneNumber,
-          email: session?.user?.email,
-          userId: '3ea1fa7d-f6dc-4b2d-87c1-d6ac2dba5856',
+          email,
+       userId
         },
         {
           headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
-      
-      // Show success message and redirect to job page
+
       setMessage("Event created successfully! You'll receive call alerts before the event.");
-      
-      // Clear form fields
       setName("");
       setDescription("");
       setDate("");
       setTime("");
-      
-      // Redirect to job page after 2 seconds
+
       setTimeout(() => {
         router.push("/job");
       }, 2000);
-      
+
     } catch (error: any) {
       console.error("Error creating event:", error);
       setMessage("Error creating event. Please try again.");
@@ -125,12 +136,12 @@ console.log("saving data",session?.user)
     }
   };
 
-  if (!session) {
+  if (!accessToken || !refreshToken) {
     return (
       <div className={styles.container}>
         <div className={styles.card}>
           <div className={styles.loading}></div>
-          <p>Redirecting to login...</p>
+          <p>Please login with Google first</p>
         </div>
       </div>
     );
@@ -140,7 +151,7 @@ console.log("saving data",session?.user)
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.userInfo}>
-          <div className={styles.userEmail}>Signed in as: {session.user?.email}</div>
+          <div className={styles.userEmail}>Signed in as: {email || "Your Google account"}</div>
           <div className={styles.userPhone}>Phone: {phoneNumber}</div>
         </div>
 
@@ -196,24 +207,20 @@ console.log("saving data",session?.user)
             />
           </div>
 
-          <button 
-            type="submit" 
-            className={styles.button}
-            disabled={isLoading}
-          >
+          <button type="submit" className={styles.button} disabled={isLoading}>
             {isLoading ? (
               <>
                 <div className={styles.loading}></div>
                 Creating Event...
               </>
             ) : (
-              'Create Event'
+              "Create Event"
             )}
           </button>
         </form>
 
         {message && (
-          <div className={`${styles.message} ${message.includes('successfully') ? styles.success : styles.error}`}>
+          <div className={`${styles.message} ${message.includes("successfully") ? styles.success : styles.error}`}>
             {message}
           </div>
         )}

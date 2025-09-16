@@ -8,7 +8,7 @@ import { Server } from "socket.io";
 import { In } from "typeorm";
 
 export function setupReminderJob(io: Server, callback: (results: any[]) => void) {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     console.log("🕒 Running event reminder job...");
     const results: any[] = [];
     const userRepository = AppDataSource.getRepository(User);

@@ -60,12 +60,13 @@ export async function googleCallback(req: Request, res: Response) {
 
     await userRepository.save(user);
 
-    // Redirect to frontend with token or session info
-    const redirectUrl = `http://localhost:3000/phone?access_token=${encodeURIComponent(
-        tokens.access_token!
-    )}&refresh_token=${encodeURIComponent(tokens.refresh_token!)}`;
+    // Redirect to frontend with token, user ID, etc.
+const redirectUrl = `http://localhost:3000/phone?access_token=${encodeURIComponent(
+    tokens.access_token!
+)}&refresh_token=${encodeURIComponent(tokens.refresh_token!)}&user_id=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.email)}`;
 
-    res.redirect(redirectUrl);
+
+res.redirect(redirectUrl);
   } catch (error) {
     console.error("Google callback error:", error);
     res.status(500).send("Authentication failed");
