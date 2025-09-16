@@ -20,13 +20,13 @@ export async function createEventHandler(req: Request, res: Response) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const eventData = await insertGoogleEvent(user.accessToken, {
+    // Create Google Calendar event using the user's ID (token handling happens in google.ts)
+    const eventData = await insertGoogleEvent(user.id, {
       summary: name,
       description,
       start: { dateTime: date },
       end: { dateTime: endDate },
     });
-
     if (!eventData.id) {
       return res.status(500).json({ message: "Failed to create Google Calendar event" });
     }

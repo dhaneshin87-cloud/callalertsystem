@@ -33,21 +33,8 @@ export default function Home() {
   }, [session, router]);
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      // Use NextAuth's built-in redirect handling
-      await signIn('google', { 
-        callbackUrl: '/phone',
-        redirect: true 
-      });
-    } catch (error) {
-      console.error("Sign in error:", error);
-      setError('An unexpected error occurred. Please try again.');
-      setIsLoading(false);
-    }
+    window.location.href = 'http://localhost:5000/auth/google';
   };
-
   // Modified loading state with timeout
   if (status === "loading" && !sessionTimeout) {
     return (

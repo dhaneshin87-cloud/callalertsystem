@@ -1,24 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "@/lib/api";// Import the configured API client
 import styles from "./phone.module.css";
 
 export default function PhonePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [phone, setPhone] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [access_token, setAccessToken] = useState<string | null>(null);
+  const [refresh_token, setRefreshToken] = useState<string | null>(null);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!session) {
-      router.push("/");
-    }
-  }, [session, router]);
+    const access = searchParams.get("access_token");
+    const refresh = searchParams.get("refresh_token");
+
+    if (access) setAccessToken(access);
+    if (refresh) setRefreshToken(refresh);
+
+    if (access) localStorage.setItem("google_access_token", access);
+    if (refresh) localStorage.setItem("google_refresh_token", refresh);
+  }, [searchParams]);
 
   const validatePhoneNumber = (phone: string) => {
     const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
@@ -42,12 +52,9 @@ export default function PhonePage() {
 
     try {
       // Save to backend using configured API client
-      const response = await apiClient.post('/api/user/phone', {
-        phone: phone.trim(),
-        email: session?.user?.email,
-      });
+      
 
-      if (response.status === 200) {
+    
         // Also save to localStorage as backup
         localStorage.setItem("phoneNumber", phone.trim());
         setSuccess("Phone number saved successfully!");
@@ -56,8 +63,8 @@ export default function PhonePage() {
         setTimeout(() => {
           router.push("/event");
         }, 1500);
-      }
-    } catch (error: any) {
+      
+    } catch (error: unknown) {
       console.error("Error saving phone number:", error);
       
       // Fallback to localStorage if backend fails
@@ -72,7 +79,7 @@ export default function PhonePage() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSave();
     }

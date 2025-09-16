@@ -1,6 +1,39 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
+async function refreshAccessToken(token: any) {
+  try {
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      grant_type: "refresh_token",
+      refresh_token: token.refreshToken,
+    });
+
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to refresh access token");
+    }
+
+    return {
+      ...token,
+      accessToken: data.access_token,
+      accessTokenExpires: Date.now() + data.expires_in * 1000,
+      // Only update refreshToken if Google returned a new one
+      refreshToken: data.refresh_token ?? token.refreshToken,
+    };
+  } catch (e) {
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+}
+
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -8,7 +41,8 @@ export const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/calendar",
+          // Request the scope needed to create events
+          scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
           access_type: "offline",
           prompt: "consent",
         },
@@ -16,7 +50,6 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  // Add NEXTAUTH_URL for proper callback handling
   url: process.env.NEXTAUTH_URL,
   pages: {
     signIn: '/',
@@ -24,21 +57,36 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, account }: { token: any, account: any }) {
+      // Initial sign in
       if (account) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
+        return {
+          ...token,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: Date.now() + (account.expires_in ?? 3600) * 1000,
+        };
       }
+
+      // Return previous token if the access token has not expired yet
+      if (token.accessToken && token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+        return token;
+      }
+
+      // Access token has expired, try to refresh it
+      if (token.refreshToken) {
+        return await refreshAccessToken(token);
+      }
+
       return token;
     },
     async session({ session, token }: { session: any, token: any }) {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
+      session.error = token.error;
       return session;
     },
     async redirect({ url, baseUrl }: { url: string, baseUrl: string }) {
-      // Allow callback URLs on the same origin
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allow callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url;
       return `${baseUrl}/phone`;
     },

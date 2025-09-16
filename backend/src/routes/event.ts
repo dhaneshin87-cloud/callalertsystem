@@ -4,6 +4,6 @@ import { createEventHandler, listEventsHandler } from "../controllers/eventcontr
 const router = Router();
 
 router.post("/eventcreate",createEventHandler);
-router.get("/list", listEventsHandler);
+router.get("/list/:userid", listEventsHandler);
 
 export default router;

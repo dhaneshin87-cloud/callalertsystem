@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import apiClient from "../../lib/api"; // Import the configured API client
 import styles from "./event.module.css";
+import { access } from "fs";
+import { headers } from "next/headers";
 
 export default function EventPage() {
   const { data: session } = useSession();
@@ -81,23 +83,40 @@ export default function EventPage() {
       }
 
       // const eventData = await calendarResponse.json();
-
+console.log("saving data",session?.user)
       // Save event to backend with phone number using configured API client
-      await apiClient.post('/events/eventcreate', {
-        name,
-        description,
-        date: dateTimeStart,
-        endDate: dateTimeEnd,
-        phoneNumber,
-        email: session?.user?.email,
-        userId: session?.user?.email
-      });
-
+      await apiClient.post(
+        '/events/eventcreate',
+        {
+          name,
+          description,
+          date: dateTimeStart,
+          endDate: dateTimeEnd,
+          phoneNumber,
+          email: session?.user?.email,
+          userId: '3ea1fa7d-f6dc-4b2d-87c1-d6ac2dba5856',
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+      
+      // Show success message and redirect to job page
       setMessage("Event created successfully! You'll receive call alerts before the event.");
+      
+      // Clear form fields
       setName("");
       setDescription("");
       setDate("");
       setTime("");
+      
+      // Redirect to job page after 2 seconds
+      setTimeout(() => {
+        router.push("/job");
+      }, 2000);
+      
     } catch (error: any) {
       console.error("Error creating event:", error);
       setMessage("Error creating event. Please try again.");
