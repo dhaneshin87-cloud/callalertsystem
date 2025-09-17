@@ -32,10 +32,13 @@ type WSItem = {
 export default function JobMonitor() {
   const { data: session } = useSession();
   const [items, setItems] = useState<WSItem[]>([]);
+  const [email, setEmail] = useState<string | null>(null);
+
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
 
   useEffect(() => {
     const userId = localStorage.getItem("user_id");
+    setEmail(localStorage.getItem('user_email'));
     if (!userId) return;
 
     const socket = io("http://localhost:5000", {
@@ -101,7 +104,7 @@ export default function JobMonitor() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.userInfo}>
-          <div className={styles.userEmail}>Signed in as: {session?.user?.email}</div>
+          <div className={styles.userEmail}>Signed in as: {email}</div>
         </div>
 
         <h1 className={styles.title}>Event Call Status</h1>

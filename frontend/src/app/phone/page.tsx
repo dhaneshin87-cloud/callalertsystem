@@ -110,7 +110,7 @@ export default function PhonePage() {
       <div className={styles.container}>
         <div className={styles.card}>
           <div className={styles.loading}></div>
-          <p>Please login via Google first</p>
+          <p>Loading</p>
         </div>
       </div>
     );
